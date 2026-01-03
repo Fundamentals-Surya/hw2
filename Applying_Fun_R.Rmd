@@ -1,0 +1,206 @@
+---
+title: An R Markdown document converted from "Applying_Fun_R.ipynb"
+output: html_document
+---
+
+# Applying functions in R
+
+Installing to read Excel files:
+
+```{r}
+# Installs the rio package for the notebook
+#install.packages('rio')
+```
+
+# reading data
+
+```{r}
+# Saves the link from github for the fragility state index Excel file
+linkGit="https://github.com/Fundamentals-Surya/hw2/raw/refs/heads/main/FSI-2023-DOWNLOAD.xlsx"
+
+# Imports the link as a df object
+fragility23=rio::import(file = linkGit) #object that will hold the result
+```
+
+```{r}
+# Shows data type of object, dimension length, and column data types
+str(fragility23)
+```
+
+## Apply square root function?
+
+```{r}
+# Attempts to take square root of data frame object, this results in an error,
+# since some columns have non-numeric data type
+# sqrt(fragility23)
+```
+
+```{r}
+# several columns (only numerical)
+# Takes square root of every value in Total and S1 columns
+sqrt(fragility23[,4:5])
+```
+
+```{r}
+# Takes square root of every value in the Total column
+sqrt(fragility23$Total)
+```
+
+```{r}
+# Takes square root of the first value of the Total column
+sqrt(fragility23$Total[1])
+```
+
+## Applying **sum()**:
+
+```{r}
+# Sums together all values from the Total column and S1 column
+sum(fragility23[,4:5])
+```
+
+```{r}
+# Sums together values in Total column, then separately sums together values in
+# S1 column, resulting in two sums (2 element vector)
+print(apply(fragility23[,4:5],2,sum))
+```
+
+```{r}
+# Outputs type of the apply function output, which is double (for 2 element vector)
+typeof(apply(fragility23[,4:5],2,sum))
+```
+
+If you do not see **list**, then it is a vector. ⏫
+
+```{r}
+# Sums each row separately for the Total Column and S1 column, prints 179 sums, one sum 
+# corresponds to one row
+print(apply(fragility23[,4:5],1,sum))
+```
+
+### Apply by iterating:
+
+```{r}
+# Calculates total sum for the Total column and total sum for the S1 column, and
+# outputs these sums in a list
+print(lapply(fragility23[,4:5],sum))
+```
+
+Notice output of **lapply**:
+
+```{r}
+# Prints the type of the lapply output, which is list (stored in memory as list)
+typeof(lapply(fragility23[,4:5],sum))
+```
+
+```{r}
+# Prints the type of the lapply output, which is list again, but class()
+# function tells the object behavior (which is list)
+class(lapply(fragility23[,4:5],sum))
+```
+
+Notice output of **sapply**:
+
+```{r}
+# Calculates total sum of total Column and total sum of S1 column, and returns
+# a vector of the 2 sums
+print(sapply(fragility23[,4:5],sum))
+```
+
+```{r}
+# Outputs the numeric type, as the returned vector contains numeric data
+class(sapply(fragility23[,4:5],sum))
+```
+
+Similarly:
+
+```{r}
+# Takes square root of each value in all rows of the Total column and S1 column,
+# and outputs these columns as a list
+print(lapply(fragility23[,4:5],sqrt))
+```
+
+```{r}
+# Prints out list, as the lapply function returns a list
+class(lapply(fragility23[,4:5],sqrt))
+```
+
+```{r}
+# Calculates square root of values in rows of columns Total and S1, and returns
+# these columns as a matrix, since they have same number of rows
+print(sapply(fragility23[,4:5],sqrt))
+```
+
+```{r}
+# This outputs matrix array, since sapply returns a matrix because the row lengths
+# are the same for the 2 columns
+class(sapply(fragility23[,4:5],sqrt))
+```
+
+Now our own function:
+
+```{r}
+# This function calculates the average of the second column, and checks if each
+# value in the second column is above or below the average, and appends a new
+# Status column to the new DF, and returns the new DF
+theOnesOK = function(DF_country_and_variable) {
+  variable_values <- DF_country_and_variable[,2] # Extracts all row values of second column
+  avg_value <- mean(variable_values, na.rm = TRUE) # Takes average of second column, and to ignore missing data
+  is_above <- ifelse(variable_values > avg_value, "Above Average", "Below/At Average") # Creates new vector, if value is greater, add Above Average, otherwise add Below/At Average
+  DF_country_and_variable$Status <- is_above # Creates new status column in DF, extracts strings from the is_above vector
+  return(DF_country_and_variable) # Returns the new DF with the country column, S1 column, and status column
+}
+```
+
+```{r}
+# Calculates the average of S1 for all countries and shows if each country is above or below the average
+theOnesOK(fragility23[,c('Country','S1: Demographic Pressures')])
+```
+
+```{r}
+# This function calculates the average of the passed in DFvariable column, and checks if each
+# value in this column is above or below the average, and appends a new
+# Status_on (with the DFvariable name appended) column to the new DF, and returns the new DF.
+# This is different from theOnesOK, since there are 2 more function parameters in the new function,
+# DFvariable, which allows for any column name to be passed, and the CountryColumn default parameter,
+# which is set to the Country column string name. Also, it creates a newname string, in which it appends the 
+# DFvariable name to the Status_on string, for the new column that is added to the DF. Also, the table returned
+# only has 2 columns compared to theOnesOK, which returns a 3 column table. This is fine because the Status_on column name
+# has the original column name appended from the passed in DFvariable.
+theOnesOK2 = function(DF, DFvariable, CountryColumn='Country') {
+  variable_values <- DF[,DFvariable] # Extracts all row values from DFvariable column
+  avg_value <- mean(variable_values, na.rm = TRUE) # Takes average of all values in DFvariable column, and ignores missing data
+  is_above <- ifelse(variable_values > avg_value, "Above Average", "Below/At Average") # Creates new vector, if value is greater, add Above Average, otherwise add Below/At Average
+  newname = paste('Status_on', DFvariable) # Create newname string with DFvariable name appended to the Status_on string
+  DF[,newname] <- is_above # Creates newname column in DF, extracts strings from the is_above vector
+  return(DF[,c(CountryColumn, newname)]) # Returns the new DF with the country column and Status_on column
+}
+```
+
+```{r}
+# Calculates the average of S1 for all countries and shows if each country is above or below the average
+theOnesOK2(fragility23, "S1: Demographic Pressures")
+```
+
+```{r}
+# This function calculates the row average for the passed in listed columns in
+# positionsToUse, and creates a new DF with the country column and adds an average
+# column with the row averages and returns the new DF
+mystery=function(DF,positionsToUse,CountryColumn='Country'){
+  newDF=DF[,c(CountryColumn),drop = FALSE] # Creates a newDF object and only has country column, the drop=False makes sure stays as a data frame even with only one column
+  average='average' # Creates new string object called average
+  newDF[,average]=apply(DF[,positionsToUse],1,mean,na.rm = TRUE) # Calculates row averages per country and returns numeric vector, which is added as new average column to newDF
+  return(newDF[,c(CountryColumn,average)]) # Returns the newDF with the country column and average column
+}
+```
+
+```{r}
+# Finds average per country based on averaging Total, S1, and S2, and returns
+# all country averages in table 
+mystery(fragility23,4:6)
+```
+
+```{r}
+# This is a subset of the fragility23 table, containing the Total and S1 columns
+fragility23[,c('Total',	'S1: Demographic Pressures')]
+```
+
